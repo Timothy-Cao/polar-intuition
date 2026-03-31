@@ -9,8 +9,9 @@ import {
   submitAnswer,
   nextQuestion,
   toggleMode,
+  setTier,
 } from "@/lib/quizEngine";
-import type { QuizState } from "@/types";
+import type { QuizState, Tier } from "@/types";
 
 export default function Home() {
   const [state, setState] = useState<QuizState>(createInitialState);
@@ -43,6 +44,11 @@ export default function Home() {
     });
   }, []);
 
+  const handleTierChange = useCallback((tier: Tier) => {
+    setShowNext(false);
+    setState((prev) => setTier(prev, tier));
+  }, []);
+
   return (
     <main className="flex flex-col items-center min-h-screen px-4 py-8">
       <div className="w-full max-w-2xl flex flex-col items-center gap-6">
@@ -53,7 +59,7 @@ export default function Home() {
 
         {/* Score Bar */}
         <div className="w-full rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] px-5 py-4">
-          <ScoreBar state={state} />
+          <ScoreBar state={state} onTierChange={handleTierChange} />
         </div>
 
         {/* Mode Toggle */}

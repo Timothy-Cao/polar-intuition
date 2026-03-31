@@ -120,6 +120,18 @@ export function nextQuestion(state: QuizState): QuizState {
 // toggleMode
 // ---------------------------------------------------------------------------
 
+export function setTier(state: QuizState, tier: Tier): QuizState {
+  const newState: QuizState = {
+    ...state,
+    currentTier: tier,
+    streak: 0,
+    selectedIndex: null,
+    showResult: false,
+  };
+  newState.question = generateQuestion(newState);
+  return newState;
+}
+
 export function toggleMode(state: QuizState): QuizState {
   const newMode: QuizMode =
     state.mode === "expression-to-graph"

@@ -38,6 +38,8 @@ export interface PlotOptions {
   gridColor?: string;
   padding?: number;
   samples?: number;
+  logicalWidth?: number;
+  logicalHeight?: number;
 }
 
 export interface QuizQuestion {

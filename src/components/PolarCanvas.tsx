@@ -26,19 +26,25 @@ export default function PolarCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = size * 2;
-    canvas.height = size * 2;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(2, 2);
-    ctx.clearRect(0, 0, size, size);
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
 
+    // Set physical pixels for sharpness
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+
+    // Reset transform and scale for DPR
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // plotPolar should work in logical (CSS) pixel coordinates
     plotPolar(ctx, rFunc, thetaRange, {
       strokeColor: "#a5b4fc",
       strokeWidth: 2.5,
       showGrid: true,
       gridColor: "#252540",
-      padding: 30,
+      padding: 20,
       samples: 2000,
+      logicalWidth: size,
+      logicalHeight: size,
       ...options,
     });
   }, [rFunc, thetaRange, options, size]);

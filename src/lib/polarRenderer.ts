@@ -196,10 +196,14 @@ export function plotPolar(
     gridColor = DEFAULT_GRID_COLOR,
     padding = DEFAULT_PADDING,
     samples = DEFAULT_SAMPLES,
+    logicalWidth,
+    logicalHeight,
   } = options ?? {};
 
-  const width = ctx.canvas.width;
-  const height = ctx.canvas.height;
+  // Use logical dimensions if provided (for retina/DPR scaling),
+  // otherwise fall back to physical canvas dimensions
+  const width = logicalWidth ?? ctx.canvas.width;
+  const height = logicalHeight ?? ctx.canvas.height;
 
   // Clear canvas with dark background
   ctx.fillStyle = BACKGROUND_COLOR;

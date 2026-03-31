@@ -4,6 +4,7 @@ import type { QuizState, Tier } from "@/types";
 
 interface ScoreBarProps {
   state: QuizState;
+  onTierChange: (tier: Tier) => void;
 }
 
 const tierLabels: Record<Tier, string> = {
@@ -20,12 +21,13 @@ const tierColors: Record<Tier, string> = {
   4: "#ef4444",
 };
 
-export default function ScoreBar({ state }: ScoreBarProps) {
+const tiers: Tier[] = [1, 2, 3, 4];
+
+export default function ScoreBar({ state, onTierChange }: ScoreBarProps) {
   const { score, streak, currentTier } = state;
-  const streakProgress = Math.min(streak / 5, 1);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Score */}
         <div className="flex items-center gap-2">
@@ -59,9 +61,8 @@ export default function ScoreBar({ state }: ScoreBarProps) {
           </span>
         </div>
 
-        {/* Tier */}
+        {/* Current tier label */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--text-secondary)] font-medium">Tier</span>
           <span
             className="text-sm font-bold px-2.5 py-0.5 rounded-full"
             style={{
@@ -69,12 +70,46 @@ export default function ScoreBar({ state }: ScoreBarProps) {
               color: tierColors[currentTier],
             }}
           >
-            {currentTier} &middot; {tierLabels[currentTier]}
+            {tierLabels[currentTier]}
           </span>
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Tier selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--text-secondary)] font-medium mr-1">Difficulty</span>
+        {tiers.map((tier) => (
+          <button
+            key={tier}
+            onClick={() => onTierChange(tier)}
+            className={`
+              px-3 py-1.5 rounded-lg text-xs font-semibold
+              transition-all duration-200
+              ${
+                tier === currentTier
+                  ? "shadow-md scale-105"
+                  : "opacity-50 hover:opacity-80"
+              }
+            `}
+            style={{
+              backgroundColor:
+                tier === currentTier
+                  ? tierColors[tier] + "30"
+                  : tierColors[tier] + "10",
+              color: tierColors[tier],
+              borderWidth: 1,
+              borderColor:
+                tier === currentTier
+                  ? tierColors[tier] + "60"
+                  : "transparent",
+            }}
+          >
+            {tier} - {tierLabels[tier]}
+          </button>
+        ))}
+      </div>
+
+      {/* Progress bar toward next tier */}
       {currentTier < 4 && (
         <div className="w-full">
           <div className="flex items-center justify-between mb-1">
@@ -89,7 +124,7 @@ export default function ScoreBar({ state }: ScoreBarProps) {
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
-                width: `${streakProgress * 100}%`,
+                width: `${Math.min(streak / 5, 1) * 100}%`,
                 backgroundColor: tierColors[currentTier],
               }}
             />
