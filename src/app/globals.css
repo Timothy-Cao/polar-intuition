@@ -1,0 +1,26 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-card: #12121a;
+  --bg-card-hover: #1a1a2e;
+  --border-subtle: #2a2a3e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --accent-correct: #22c55e;
+  --accent-wrong: #ef4444;
+  --accent-highlight: #6366f1;
+  --curve-stroke: #818cf8;
+  --grid-line: #1e1e30;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.katex {
+  font-size: 1.1em;
+}
