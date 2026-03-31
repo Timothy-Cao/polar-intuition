@@ -30,11 +30,6 @@ function polarToCartesian(r: number, theta: number): PolarPoint {
   };
 }
 
-/**
- * Samples all (x, y) points for the given polar function over the theta range.
- * For r² forms, returns two branches (positive and negative sqrt).
- * Each branch is an array of PolarPoint where `valid` indicates whether to draw.
- */
 function samplePoints(
   rFunc: RFunc,
   thetaRange: [number, number],
@@ -65,7 +60,6 @@ function samplePoints(
     return [posBranch, negBranch];
   }
 
-  // Standard r(theta)
   const branch: PolarPoint[] = [];
   for (let i = 0; i <= samples; i++) {
     const theta = thetaMin + i * step;
@@ -77,53 +71,78 @@ function samplePoints(
   return [branch];
 }
 
-function findMaxR(branches: PolarPoint[][]): number {
-  let maxR = 0;
+interface BoundingBox {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+function findBoundingBox(branches: PolarPoint[][]): BoundingBox {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+
   for (const branch of branches) {
     for (const pt of branch) {
       if (pt.valid) {
-        const dist = Math.sqrt(pt.x * pt.x + pt.y * pt.y);
-        if (dist > maxR) maxR = dist;
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
       }
     }
   }
-  return maxR;
+
+  // Always include the origin so the grid makes sense
+  if (minX > 0) minX = 0;
+  if (maxX < 0) maxX = 0;
+  if (minY > 0) minY = 0;
+  if (maxY < 0) maxY = 0;
+
+  return { minX, maxX, minY, maxY };
 }
 
 function drawGrid(
   ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  cx: number,
-  cy: number,
+  originPx: number,
+  originPy: number,
   scale: number,
-  maxR: number,
+  bbox: BoundingBox,
   gridColor: string
 ): void {
   ctx.strokeStyle = gridColor;
   ctx.lineWidth = 1;
 
-  // Concentric circles: pick 4-5 evenly spaced radii
+  // Find the max distance from origin to any corner of the bounding box
+  const maxR = Math.max(
+    Math.sqrt(bbox.minX * bbox.minX + bbox.minY * bbox.minY),
+    Math.sqrt(bbox.maxX * bbox.maxX + bbox.minY * bbox.minY),
+    Math.sqrt(bbox.minX * bbox.minX + bbox.maxY * bbox.maxY),
+    Math.sqrt(bbox.maxX * bbox.maxX + bbox.maxY * bbox.maxY),
+  );
+
+  if (maxR === 0) return;
+
+  // Concentric circles
   const numCircles = 5;
   const rStep = maxR / numCircles;
 
   for (let i = 1; i <= numCircles; i++) {
-    const r = rStep * i;
-    const pixelR = r * scale;
+    const pixelR = rStep * i * scale;
     ctx.beginPath();
-    ctx.arc(cx, cy, pixelR, 0, Math.PI * 2);
+    ctx.arc(originPx, originPy, pixelR, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  // 12 radial lines (every 30 degrees)
-  const maxPixelR = maxR * scale;
+  // 12 radial lines
+  const maxPixelR = maxR * scale * 1.2;
   for (let i = 0; i < 12; i++) {
     const angle = (i * Math.PI) / 6;
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
+    ctx.moveTo(originPx, originPy);
     ctx.lineTo(
-      cx + maxPixelR * Math.cos(angle),
-      cy - maxPixelR * Math.sin(angle)
+      originPx + maxPixelR * Math.cos(angle),
+      originPy - maxPixelR * Math.sin(angle)
     );
     ctx.stroke();
   }
@@ -132,8 +151,8 @@ function drawGrid(
 function drawBranch(
   ctx: CanvasRenderingContext2D,
   branch: PolarPoint[],
-  cx: number,
-  cy: number,
+  originPx: number,
+  originPy: number,
   scale: number
 ): void {
   let inSegment = false;
@@ -147,8 +166,8 @@ function drawBranch(
       continue;
     }
 
-    const px = cx + pt.x * scale;
-    const py = cy - pt.y * scale; // canvas y is inverted
+    const px = originPx + pt.x * scale;
+    const py = originPy - pt.y * scale;
 
     if (!inSegment) {
       ctx.beginPath();
@@ -186,32 +205,46 @@ export function plotPolar(
   ctx.fillStyle = BACKGROUND_COLOR;
   ctx.fillRect(0, 0, width, height);
 
-  // First pass: sample all points and find max |r| for auto-scaling
+  // Sample all points
   const branches = samplePoints(rFunc, thetaRange, samples);
-  const maxR = findMaxR(branches);
+  const bbox = findBoundingBox(branches);
 
-  if (maxR === 0) return;
+  const dataWidth = bbox.maxX - bbox.minX;
+  const dataHeight = bbox.maxY - bbox.minY;
 
-  // Auto-scale: fit the curve within the canvas with padding
+  if (dataWidth === 0 && dataHeight === 0) return;
+
+  // Scale to fit the bounding box within the canvas (with padding)
   const availableWidth = width - 2 * padding;
   const availableHeight = height - 2 * padding;
-  const scale = Math.min(availableWidth, availableHeight) / (2 * maxR);
+  const scale = Math.min(
+    availableWidth / (dataWidth || 1),
+    availableHeight / (dataHeight || 1)
+  );
 
-  const cx = width / 2;
-  const cy = height / 2;
+  // Center of the bounding box in data coordinates
+  const dataCenterX = (bbox.minX + bbox.maxX) / 2;
+  const dataCenterY = (bbox.minY + bbox.maxY) / 2;
 
-  // Draw grid behind the curve
+  // The origin (0,0) in pixel coordinates — offset from canvas center
+  // Canvas center maps to data center, so origin is shifted accordingly
+  const canvasCenterX = width / 2;
+  const canvasCenterY = height / 2;
+  const originPx = canvasCenterX - dataCenterX * scale;
+  const originPy = canvasCenterY + dataCenterY * scale; // y inverted
+
+  // Draw grid centered on the polar origin
   if (showGrid) {
-    drawGrid(ctx, width, height, cx, cy, scale, maxR, gridColor);
+    drawGrid(ctx, originPx, originPy, scale, bbox, gridColor);
   }
 
-  // Second pass: draw the actual curve paths
+  // Draw the curve
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = strokeWidth;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
   for (const branch of branches) {
-    drawBranch(ctx, branch, cx, cy, scale);
+    drawBranch(ctx, branch, originPx, originPy, scale);
   }
 }
