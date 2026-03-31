@@ -45,7 +45,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center min-h-screen px-4 py-8">
-      <div className="w-full max-w-xl flex flex-col items-center gap-6">
+      <div className="w-full max-w-2xl flex flex-col items-center gap-6">
         {/* Header */}
         <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tracking-tight">
           Polar Intuition

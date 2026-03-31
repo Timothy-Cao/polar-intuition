@@ -1,12 +1,12 @@
 import type { RFunc, RFuncSquared, PlotOptions } from "@/types";
 
 const R_MAX = 50;
-const DEFAULT_STROKE_COLOR = "#818cf8";
-const DEFAULT_STROKE_WIDTH = 2;
-const DEFAULT_GRID_COLOR = "#1e1e30";
-const DEFAULT_PADDING = 20;
+const DEFAULT_STROKE_COLOR = "#a5b4fc";
+const DEFAULT_STROKE_WIDTH = 2.5;
+const DEFAULT_GRID_COLOR = "#252540";
+const DEFAULT_PADDING = 30;
 const DEFAULT_SAMPLES = 2000;
-const BACKGROUND_COLOR = "#12121a";
+const BACKGROUND_COLOR = "#0c0c18";
 
 function isRSquared(rFunc: RFunc): rFunc is RFuncSquared {
   return typeof rFunc === "object" && "rSquared" in rFunc && rFunc.rSquared;

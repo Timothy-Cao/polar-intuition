@@ -77,7 +77,7 @@ export default function QuizBoard({ state, onSelect }: QuizBoardProps) {
               <PolarCanvas
                 rFunc={correctCurve!.rFunc}
                 thetaRange={correctCurve!.thetaRange}
-                size={300}
+                size={350}
               />
             </div>
           </>
@@ -85,7 +85,7 @@ export default function QuizBoard({ state, onSelect }: QuizBoardProps) {
       </div>
 
       {/* 2x2 Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-xl">
+      <div className="grid grid-cols-2 gap-4 sm:gap-5 w-full max-w-2xl">
         {question.options.map((curve, i) => (
           <QuizCard
             key={curve.id + "-" + i}
@@ -110,7 +110,7 @@ export default function QuizBoard({ state, onSelect }: QuizBoardProps) {
 
       {/* Wrong answer tip */}
       {wasWrong && (
-        <div className="w-full max-w-xl rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] px-5 py-4 transition-all duration-500 animate-in fade-in slide-in-from-bottom-2">
+        <div className="w-full max-w-2xl rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] px-5 py-4 transition-all duration-500 animate-in fade-in slide-in-from-bottom-2">
           <p className="text-sm text-[var(--text-secondary)]">
             <span className="text-[var(--accent-highlight)] font-semibold">Tip:</span>{" "}
             {tip}

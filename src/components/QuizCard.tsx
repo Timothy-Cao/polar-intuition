@@ -52,11 +52,12 @@ export default function QuizCard({
       disabled={showResult}
       className={`
         relative flex flex-col items-center justify-center
-        rounded-2xl border-2 p-3
+        rounded-2xl border-2 p-4
         bg-[var(--bg-card)] transition-all duration-300 ease-out
+        shadow-lg shadow-black/30
         ${borderColor}
-        ${!showResult ? "hover:bg-[var(--bg-card-hover)] hover:border-[var(--accent-highlight)] hover:scale-[1.02] cursor-pointer" : "cursor-default"}
-        ${showResult && !selected && !isCorrect ? "opacity-40" : "opacity-100"}
+        ${!showResult ? "hover:bg-[var(--bg-card-hover)] hover:border-[var(--accent-highlight)] hover:scale-[1.03] hover:shadow-xl hover:shadow-indigo-500/10 cursor-pointer" : "cursor-default"}
+        ${showResult && !selected && !isCorrect ? "opacity-30" : "opacity-100"}
       `}
     >
       <span className="absolute top-2 left-3 text-xs font-semibold text-[var(--text-secondary)]">
@@ -67,11 +68,11 @@ export default function QuizCard({
         <PolarCanvas
           rFunc={curve.rFunc}
           thetaRange={curve.thetaRange}
-          size={140}
+          size={220}
         />
       ) : (
         <div
-          className="flex items-center justify-center min-h-[120px] px-2 text-[var(--text-primary)] text-lg"
+          className="flex items-center justify-center min-h-[140px] px-4 text-[var(--text-primary)] text-xl"
           dangerouslySetInnerHTML={{ __html: katexHtml }}
         />
       )}

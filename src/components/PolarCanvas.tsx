@@ -33,12 +33,12 @@ export default function PolarCanvas({
     ctx.clearRect(0, 0, size, size);
 
     plotPolar(ctx, rFunc, thetaRange, {
-      strokeColor: "var(--curve-stroke)",
-      strokeWidth: 2,
+      strokeColor: "#a5b4fc",
+      strokeWidth: 2.5,
       showGrid: true,
-      gridColor: "var(--grid-line)",
-      padding: 20,
-      samples: 1000,
+      gridColor: "#252540",
+      padding: 30,
+      samples: 2000,
       ...options,
     });
   }, [rFunc, thetaRange, options, size]);
@@ -47,7 +47,7 @@ export default function PolarCanvas({
     <canvas
       ref={canvasRef}
       style={{ width: size, height: size }}
-      className="rounded-xl bg-[var(--bg-primary)]"
+      className="rounded-xl"
     />
   );
 }

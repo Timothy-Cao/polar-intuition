@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#0c0c18"/>
+  <g transform="translate(16,16)">
+    <!-- Polar grid hint -->
+    <circle cx="0" cy="0" r="5" fill="none" stroke="#252540" stroke-width="0.5"/>
+    <circle cx="0" cy="0" r="10" fill="none" stroke="#252540" stroke-width="0.5"/>
+    <!-- 4-petal rose: r = 10*cos(2θ) -->
+    <path d="M10,0 C10,2.5 7.07,7.07 5,8.66 C2.5,10 0,10 0,10 C0,10 -2.5,10 -5,8.66 C-7.07,7.07 -10,2.5 -10,0 C-10,-2.5 -7.07,-7.07 -5,-8.66 C-2.5,-10 0,-10 0,-10 C0,-10 2.5,-10 5,-8.66 C7.07,-7.07 10,-2.5 10,0Z" fill="none" stroke="#a5b4fc" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- Rose petals as actual polar curve approximation -->
+    <path d="M10,0 Q8,4 0,0 Q-4,8 0,10 Q-4,-8 0,-10 Q8,-4 10,0" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="1.2" fill="#a5b4fc"/>
+  </g>
+</svg>

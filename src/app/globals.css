@@ -2,17 +2,17 @@
 @import "katex/dist/katex.min.css";
 
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-card: #12121a;
-  --bg-card-hover: #1a1a2e;
-  --border-subtle: #2a2a3e;
-  --text-primary: #e8e8f0;
-  --text-secondary: #8888a0;
-  --accent-correct: #22c55e;
-  --accent-wrong: #ef4444;
-  --accent-highlight: #6366f1;
-  --curve-stroke: #818cf8;
-  --grid-line: #1e1e30;
+  --bg-primary: #06060c;
+  --bg-card: #141420;
+  --bg-card-hover: #1e1e35;
+  --border-subtle: #333355;
+  --text-primary: #f0f0ff;
+  --text-secondary: #9999bb;
+  --accent-correct: #34d399;
+  --accent-wrong: #f87171;
+  --accent-highlight: #818cf8;
+  --curve-stroke: #a5b4fc;
+  --grid-line: #252540;
 }
 
 body {
