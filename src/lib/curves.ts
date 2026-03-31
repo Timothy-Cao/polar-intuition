@@ -1,657 +1,1164 @@
-import type {
-  CurveTemplate,
-  DistractorStrategy,
-  RFunc,
-  Tier,
-} from "@/types";
+import type { CurveTemplate, DistractorStrategy, RFunc, Tier } from "@/types";
 
 const PI = Math.PI;
-const TWO_PI = 2 * Math.PI;
-const SIX_PI = 6 * Math.PI;
+const TWO_PI = 2 * PI;
+const FOUR_PI = 4 * PI;
+const SIX_PI = 6 * PI;
 
 // ---------------------------------------------------------------------------
-// 1. Cardioids  (tier 1)  ~12 entries
-// ---------------------------------------------------------------------------
-
-const cardioidStrategies: DistractorStrategy[] = [
-  "trig-swap",
-  "sign-flip",
-  "param-tweak",
-];
-
-function cardioids(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "cos", fn: Math.cos, label: "cos θ" },
-    { name: "sin", fn: Math.sin, label: "sin θ" },
-  ];
-  const signs: Array<{ sym: string; val: 1 | -1 }> = [
-    { sym: "plus", val: 1 },
-    { sym: "minus", val: -1 },
-  ];
-  const aValues = [1, 2, 3];
-
-  for (const a of aValues) {
-    for (const trig of trigFns) {
-      for (const sign of signs) {
-        const id = `cardioid-${trig.name}-${sign.sym}-${a}`;
-        const signChar = sign.val === 1 ? "+" : "-";
-        const expr =
-          a === 1
-            ? `r = 1 ${signChar} ${trig.label}`
-            : `r = ${a}(1 ${signChar} ${trig.label})`;
-        out.push({
-          id,
-          name: `Cardioid (${a}, ${trig.name}, ${signChar})`,
-          family: "cardioid",
-          expression: expr,
-          rFunc: ((aa: number, trigFn: (t: number) => number, s: number) =>
-            (theta: number) =>
-              aa * (1 + s * trigFn(theta)))(a, trig.fn, sign.val),
-          thetaRange: [0, TWO_PI],
-          tier: 1,
-          distractorStrategies: cardioidStrategies,
-          params: { a, sign: sign.val },
-        });
-      }
-    }
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 2. Limaçon (no loop)  (tier 1-2)  ~10 entries
-// ---------------------------------------------------------------------------
-
-const limaconNoLoopStrategies: DistractorStrategy[] = [
-  "trig-swap",
-  "sign-flip",
-  "param-tweak",
-  "family-swap",
-];
-
-function limaconsNoLoop(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const pairs: [number, number][] = [
-    [3, 1],
-    [3, 2],
-    [4, 1],
-    [4, 3],
-  ];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "cos", fn: Math.cos, label: "cos θ" },
-    { name: "sin", fn: Math.sin, label: "sin θ" },
-  ];
-
-  for (const [a, b] of pairs) {
-    for (const trig of trigFns) {
-      const id = `limacon-noloop-${trig.name}-${a}-${b}`;
-      const tier: Tier = b / a > 0.5 ? 2 : 1;
-      out.push({
-        id,
-        name: `Limaçon no-loop (${a} + ${b}${trig.name})`,
-        family: "limacon-no-loop",
-        expression: `r = ${a} + ${b}${trig.label}`,
-        rFunc: ((aa: number, bb: number, trigFn: (t: number) => number) =>
-          (theta: number) =>
-            aa + bb * trigFn(theta))(a, b, trig.fn),
-        thetaRange: [0, TWO_PI],
-        tier,
-        distractorStrategies: limaconNoLoopStrategies,
-        params: { a, b },
-      });
-    }
-  }
-
-  // Add two sin-minus variants for variety
-  out.push({
-    id: "limacon-noloop-sin-minus-3-2",
-    name: "Limaçon no-loop (3 - 2sin)",
-    family: "limacon-no-loop",
-    expression: "r = 3 - 2sin θ",
-    rFunc: (theta: number) => 3 - 2 * Math.sin(theta),
-    thetaRange: [0, TWO_PI],
-    tier: 2,
-    distractorStrategies: limaconNoLoopStrategies,
-    params: { a: 3, b: -2 },
-  });
-  out.push({
-    id: "limacon-noloop-cos-minus-4-1",
-    name: "Limaçon no-loop (4 - cos)",
-    family: "limacon-no-loop",
-    expression: "r = 4 - cos θ",
-    rFunc: (theta: number) => 4 - Math.cos(theta),
-    thetaRange: [0, TWO_PI],
-    tier: 1,
-    distractorStrategies: limaconNoLoopStrategies,
-    params: { a: 4, b: -1 },
-  });
-
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 3. Limaçon (with loop)  (tier 2)  ~8 entries
-// ---------------------------------------------------------------------------
-
-const limaconLoopStrategies: DistractorStrategy[] = [
-  "trig-swap",
-  "sign-flip",
-  "param-tweak",
-  "family-swap",
-];
-
-function limaconsWithLoop(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const pairs: [number, number][] = [
-    [1, 2],
-    [1, 3],
-    [2, 3],
-  ];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "cos", fn: Math.cos, label: "cos θ" },
-    { name: "sin", fn: Math.sin, label: "sin θ" },
-  ];
-
-  for (const [a, b] of pairs) {
-    for (const trig of trigFns) {
-      const id = `limacon-loop-${trig.name}-${a}-${b}`;
-      out.push({
-        id,
-        name: `Limaçon with loop (${a} + ${b}${trig.name})`,
-        family: "limacon-loop",
-        expression: `r = ${a} + ${b}${trig.label}`,
-        rFunc: ((aa: number, bb: number, trigFn: (t: number) => number) =>
-          (theta: number) =>
-            aa + bb * trigFn(theta))(a, b, trig.fn),
-        thetaRange: [0, TWO_PI],
-        tier: 2,
-        distractorStrategies: limaconLoopStrategies,
-        params: { a, b },
-      });
-    }
-  }
-
-  // Two minus-sign variants
-  out.push({
-    id: "limacon-loop-cos-minus-1-2",
-    name: "Limaçon with loop (1 - 2cos)",
-    family: "limacon-loop",
-    expression: "r = 1 - 2cos θ",
-    rFunc: (theta: number) => 1 - 2 * Math.cos(theta),
-    thetaRange: [0, TWO_PI],
-    tier: 2,
-    distractorStrategies: limaconLoopStrategies,
-    params: { a: 1, b: -2 },
-  });
-  out.push({
-    id: "limacon-loop-sin-minus-1-3",
-    name: "Limaçon with loop (1 - 3sin)",
-    family: "limacon-loop",
-    expression: "r = 1 - 3sin θ",
-    rFunc: (theta: number) => 1 - 3 * Math.sin(theta),
-    thetaRange: [0, TWO_PI],
-    tier: 2,
-    distractorStrategies: limaconLoopStrategies,
-    params: { a: 1, b: -3 },
-  });
-
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 4. Rose curves (odd n)  (tier 1-2)  ~12 entries
-// ---------------------------------------------------------------------------
-
-const roseStrategies: DistractorStrategy[] = [
-  "trig-swap",
-  "frequency-shift",
-  "param-tweak",
-];
-
-function rosesOdd(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const nValues = [1, 3, 5, 7];
-  const aValues = [1, 2];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "sin", fn: Math.sin, label: "sin" },
-    { name: "cos", fn: Math.cos, label: "cos" },
-  ];
-
-  for (const n of nValues) {
-    for (const a of aValues) {
-      // Alternate sin/cos to keep count manageable while covering both
-      const trigs = n <= 3 ? trigFns : [trigFns[n % 2]];
-      for (const trig of trigs) {
-        const tier: Tier = n <= 3 ? 1 : 2;
-        const id = `rose-${trig.name}-${n}-${a}`;
-        const aPrefix = a === 1 ? "" : `${a}`;
-        out.push({
-          id,
-          name: `Rose ${trig.name}(${n}θ) a=${a}`,
-          family: "rose-odd",
-          expression: `r = ${aPrefix}${trig.label}(${n}θ)`,
-          rFunc: ((aa: number, nn: number, trigFn: (t: number) => number) =>
-            (theta: number) =>
-              aa * trigFn(nn * theta))(a, n, trig.fn),
-          thetaRange: [0, TWO_PI],
-          tier,
-          distractorStrategies: roseStrategies,
-          params: { a, n },
-        });
-      }
-    }
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 5. Rose curves (even n)  (tier 2)  ~10 entries
-// ---------------------------------------------------------------------------
-
-function rosesEven(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const nValues = [2, 4, 6, 8];
-  const aValues = [1, 2];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "sin", fn: Math.sin, label: "sin" },
-    { name: "cos", fn: Math.cos, label: "cos" },
-  ];
-
-  for (const n of nValues) {
-    for (const a of aValues) {
-      const trigs = n <= 4 ? trigFns : [trigFns[n % 2]];
-      for (const trig of trigs) {
-        const id = `rose-${trig.name}-${n}-${a}`;
-        const aPrefix = a === 1 ? "" : `${a}`;
-        out.push({
-          id,
-          name: `Rose ${trig.name}(${n}θ) a=${a}`,
-          family: "rose-even",
-          expression: `r = ${aPrefix}${trig.label}(${n}θ)`,
-          rFunc: ((aa: number, nn: number, trigFn: (t: number) => number) =>
-            (theta: number) =>
-              aa * trigFn(nn * theta))(a, n, trig.fn),
-          thetaRange: [0, TWO_PI],
-          tier: 2,
-          distractorStrategies: roseStrategies,
-          params: { a, n },
-        });
-      }
-    }
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 6. Rose (rational)  (tier 3)  ~6 entries
-// ---------------------------------------------------------------------------
-
-const roseRationalStrategies: DistractorStrategy[] = [
-  "frequency-shift",
-  "ratio-flip",
-  "trig-swap",
-];
-
-function rosesRational(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const ratios: [number, number][] = [
-    [2, 3],
-    [3, 2],
-    [1, 3],
-    [3, 4],
-    [5, 3],
-    [4, 3],
-  ];
-
-  for (const [p, q] of ratios) {
-    const range = q * TWO_PI;
-    const id = `rose-rational-${p}-${q}`;
-    out.push({
-      id,
-      name: `Rose cos(${p}/${q} θ)`,
-      family: "rose-rational",
-      expression: `r = cos(${p}/${q} · θ)`,
-      rFunc: ((pp: number, qq: number) => (theta: number) =>
-        Math.cos((pp / qq) * theta))(p, q),
-      thetaRange: [0, range],
-      tier: 3,
-      distractorStrategies: roseRationalStrategies,
-      params: { p, q },
-    });
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 7. Lemniscate  (tier 2)  ~4 entries
-// ---------------------------------------------------------------------------
-
-const lemniscateStrategies: DistractorStrategy[] = [
-  "trig-swap",
-  "sign-flip",
-  "param-tweak",
-];
-
-function lemniscates(): CurveTemplate[] {
-  const out: CurveTemplate[] = [];
-  const aValues = [1, 2];
-  const trigFns: Array<{
-    name: string;
-    fn: (t: number) => number;
-    label: string;
-  }> = [
-    { name: "cos", fn: Math.cos, label: "cos(2θ)" },
-    { name: "sin", fn: Math.sin, label: "sin(2θ)" },
-  ];
-
-  for (const a of aValues) {
-    for (const trig of trigFns) {
-      const a2 = a * a;
-      const id = `lemniscate-${trig.name}-${a}`;
-      out.push({
-        id,
-        name: `Lemniscate r²=${a2}${trig.label}`,
-        family: "lemniscate",
-        expression: `r² = ${a2}${trig.label}`,
-        rFunc: {
-          rSquared: true,
-          func: ((aa2: number, trigFn: (t: number) => number) =>
-            (theta: number) =>
-              aa2 * trigFn(2 * theta))(a2, trig.fn),
-        } as RFunc,
-        thetaRange: [0, TWO_PI],
-        tier: 2,
-        distractorStrategies: lemniscateStrategies,
-        params: { a },
-      });
-    }
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// 8. Archimedes spiral  (tier 2)  ~3 entries
-// ---------------------------------------------------------------------------
-
-const spiralStrategies: DistractorStrategy[] = [
-  "sign-flip",
-  "param-tweak",
-  "family-swap",
-];
-
-function archimedean(): CurveTemplate[] {
-  const aValues = [0.5, 1, -0.5];
-  return aValues.map((a) => ({
-    id: `archimedes-${String(a).replace("-", "neg").replace(".", "p")}`,
-    name: `Archimedes spiral a=${a}`,
-    family: "archimedes",
-    expression: `r = ${a}θ`,
-    rFunc: ((aa: number) => (theta: number) => aa * theta)(a),
-    thetaRange: [0, SIX_PI] as [number, number],
-    tier: 2 as Tier,
-    distractorStrategies: spiralStrategies,
-    params: { a },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 9. Log spiral  (tier 3)  ~3 entries
-// ---------------------------------------------------------------------------
-
-const logSpiralStrategies: DistractorStrategy[] = [
-  "param-tweak",
-  "family-swap",
-];
-
-function logSpirals(): CurveTemplate[] {
-  const configs: [number, number][] = [
-    [0.5, 0.1],
-    [1, 0.15],
-    [0.3, 0.2],
-  ];
-  return configs.map(([a, b]) => ({
-    id: `log-spiral-${a}-${b}`.replace(/\./g, "p"),
-    name: `Log spiral a=${a}, b=${b}`,
-    family: "log-spiral",
-    expression: `r = ${a}·e^(${b}θ)`,
-    rFunc: ((aa: number, bb: number) => (theta: number) =>
-      aa * Math.exp(bb * theta))(a, b),
-    thetaRange: [0, SIX_PI] as [number, number],
-    tier: 3 as Tier,
-    distractorStrategies: logSpiralStrategies,
-    params: { a, b },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 10. Fermat's spiral  (tier 3)  ~2 entries
-// ---------------------------------------------------------------------------
-
-function fermatSpirals(): CurveTemplate[] {
-  const aValues = [1, 2];
-  return aValues.map((a) => ({
-    id: `fermat-${a}`,
-    name: `Fermat's spiral a=${a}`,
-    family: "fermat",
-    expression: `r² = ${a * a}θ`,
-    rFunc: {
-      rSquared: true,
-      func: ((aa: number) => (theta: number) => aa * aa * theta)(a),
-    } as RFunc,
-    thetaRange: [0, SIX_PI] as [number, number],
-    tier: 3 as Tier,
-    distractorStrategies: ["param-tweak", "family-swap"] as DistractorStrategy[],
-    params: { a },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 11. Hyperbolic spiral  (tier 3)  ~2 entries
-// ---------------------------------------------------------------------------
-
-function hyperbolicSpirals(): CurveTemplate[] {
-  const aValues = [1, 2];
-  return aValues.map((a) => ({
-    id: `hyperbolic-${a}`,
-    name: `Hyperbolic spiral a=${a}`,
-    family: "hyperbolic",
-    expression: `r = ${a}/θ`,
-    rFunc: ((aa: number) => (theta: number) => aa / theta)(a),
-    thetaRange: [0.1, SIX_PI] as [number, number],
-    tier: 3 as Tier,
-    distractorStrategies: ["param-tweak", "family-swap"] as DistractorStrategy[],
-    params: { a },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 12. Conic sections  (tier 3)  ~4 entries
-// ---------------------------------------------------------------------------
-
-const conicStrategies: DistractorStrategy[] = [
-  "param-tweak",
-  "family-swap",
-  "sign-flip",
-];
-
-function conics(): CurveTemplate[] {
-  const configs: Array<{ a: number; e: number; label: string }> = [
-    { a: 2, e: 0.5, label: "ellipse" },
-    { a: 2, e: 1, label: "parabola" },
-    { a: 2, e: 1.5, label: "hyperbola" },
-    { a: 3, e: 0.5, label: "ellipse" },
-    { a: 1, e: 0.8, label: "ellipse" },
-  ];
-  return configs.map(({ a, e, label }) => ({
-    id: `conic-${label}-${a}-${String(e).replace(".", "p")}`,
-    name: `Conic ${label} (a=${a}, e=${e})`,
-    family: "conic",
-    expression: `r = ${a}/(1 + ${e}cos θ)`,
-    rFunc: ((aa: number, ee: number) => (theta: number) =>
-      aa / (1 + ee * Math.cos(theta)))(a, e),
-    thetaRange: [0, TWO_PI] as [number, number],
-    tier: 3 as Tier,
-    distractorStrategies: conicStrategies,
-    params: { a, e },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 13. Compound curves  (tier 3-4)  ~4 entries
-// ---------------------------------------------------------------------------
-
-const compoundStrategies: DistractorStrategy[] = [
-  "frequency-shift",
-  "trig-swap",
-  "param-tweak",
-];
-
-function compounds(): CurveTemplate[] {
-  const configs: [number, number][] = [
-    [2, 3],
-    [3, 5],
-    [1, 2],
-    [4, 3],
-  ];
-  return configs.map(([m, n]) => ({
-    id: `compound-${m}-${n}`,
-    name: `Compound cos(${m}θ)+sin(${n}θ)`,
-    family: "compound",
-    expression: `r = cos(${m}θ) + sin(${n}θ)`,
-    rFunc: ((mm: number, nn: number) => (theta: number) =>
-      Math.cos(mm * theta) + Math.sin(nn * theta))(m, n),
-    thetaRange: [0, TWO_PI] as [number, number],
-    tier: (m + n > 6 ? 4 : 3) as Tier,
-    distractorStrategies: compoundStrategies,
-    params: { m, n },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 14. Limaçon-rose hybrids  (tier 4)  ~4 entries
-// ---------------------------------------------------------------------------
-
-const hybridStrategies: DistractorStrategy[] = [
-  "frequency-shift",
-  "param-tweak",
-  "trig-swap",
-  "family-swap",
-];
-
-function limaconRoseHybrids(): CurveTemplate[] {
-  const configs: [number, number, number][] = [
-    [1, 2, 3],
-    [2, 1, 4],
-    [1, 1, 5],
-    [2, 3, 2],
-  ];
-  return configs.map(([a, b, n]) => ({
-    id: `hybrid-${a}-${b}-${n}`,
-    name: `Hybrid ${a}+${b}sin(${n}θ)`,
-    family: "limacon-rose-hybrid",
-    expression: `r = ${a} + ${b}sin(${n}θ)`,
-    rFunc: ((aa: number, bb: number, nn: number) => (theta: number) =>
-      aa + bb * Math.sin(nn * theta))(a, b, n),
-    thetaRange: [0, TWO_PI] as [number, number],
-    tier: 4 as Tier,
-    distractorStrategies: hybridStrategies,
-    params: { a, b, n },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// 15. Butterfly curve  (tier 4)  1 entry
-// ---------------------------------------------------------------------------
-
-function butterfly(): CurveTemplate[] {
-  return [
-    {
-      id: "butterfly-classic",
-      name: "Butterfly curve",
-      family: "butterfly",
-      expression: "r = e^sin(θ) - 2cos(4θ) + sin⁵((2θ-π)/24)",
-      rFunc: (theta: number) =>
-        Math.exp(Math.sin(theta)) -
-        2 * Math.cos(4 * theta) +
-        Math.pow(Math.sin((2 * theta - PI) / 24), 5),
-      thetaRange: [0, 12 * PI],
-      tier: 4,
-      distractorStrategies: ["frequency-shift", "param-tweak"],
-      params: {},
-    },
-  ];
-}
-
-// ---------------------------------------------------------------------------
-// 16. Cochleoid  (tier 4)  ~2 entries
-// ---------------------------------------------------------------------------
-
-function cochleoids(): CurveTemplate[] {
-  const aValues = [1, 2];
-  return aValues.map((a) => ({
-    id: `cochleoid-${a}`,
-    name: `Cochleoid a=${a}`,
-    family: "cochleoid",
-    expression: `r = ${a}sin(θ)/θ`,
-    rFunc: ((aa: number) => (theta: number) =>
-      (aa * Math.sin(theta)) / theta)(a),
-    thetaRange: [0.01, SIX_PI] as [number, number],
-    tier: 4 as Tier,
-    distractorStrategies: ["param-tweak", "family-swap"] as DistractorStrategy[],
-    params: { a },
-  }));
-}
-
-// ---------------------------------------------------------------------------
-// Assemble all curves
+// 100 hand-picked polar curves — every shape is visually distinct
 // ---------------------------------------------------------------------------
 
 export const curves: CurveTemplate[] = [
-  ...cardioids(),
-  ...limaconsNoLoop(),
-  ...limaconsWithLoop(),
-  ...rosesOdd(),
-  ...rosesEven(),
-  ...rosesRational(),
-  ...lemniscates(),
-  ...archimedean(),
-  ...logSpirals(),
-  ...fermatSpirals(),
-  ...hyperbolicSpirals(),
-  ...conics(),
-  ...compounds(),
-  ...limaconRoseHybrids(),
-  ...butterfly(),
-  ...cochleoids(),
+  // ===== 1. CIRCLE =====
+  {
+    id: "circle",
+    name: "Circle",
+    family: "circle",
+    expression: "r = 3",
+    rFunc: () => 3,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 3 },
+  },
+
+  // ===== 2–5. CARDIOIDS =====
+  {
+    id: "cardioid-cos-plus",
+    name: "Cardioid (1+cosθ)",
+    family: "cardioid",
+    expression: "r = 1 + cos θ",
+    rFunc: (t) => 1 + Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 1, sign: 1 },
+  },
+  {
+    id: "cardioid-sin-plus",
+    name: "Cardioid (1+sinθ)",
+    family: "cardioid",
+    expression: "r = 1 + sin θ",
+    rFunc: (t) => 1 + Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 1, sign: 1 },
+  },
+  {
+    id: "cardioid-cos-minus",
+    name: "Cardioid (1−cosθ)",
+    family: "cardioid",
+    expression: "r = 1 - cos θ",
+    rFunc: (t) => 1 - Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 1, sign: -1 },
+  },
+  {
+    id: "cardioid-sin-minus",
+    name: "Cardioid (1−sinθ)",
+    family: "cardioid",
+    expression: "r = 1 - sin θ",
+    rFunc: (t) => 1 - Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 1, sign: -1 },
+  },
+
+  // ===== 6–13. LIMAÇONS =====
+  {
+    id: "limacon-dimpled-cos",
+    name: "Limaçon dimpled (3+2cosθ)",
+    family: "limacon-no-loop",
+    expression: "r = 3 + 2cos θ",
+    rFunc: (t) => 3 + 2 * Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "param-tweak", "family-swap"],
+    params: { a: 3, b: 2 },
+  },
+  {
+    id: "limacon-dimpled-sin",
+    name: "Limaçon dimpled (3+2sinθ)",
+    family: "limacon-no-loop",
+    expression: "r = 3 + 2sin θ",
+    rFunc: (t) => 3 + 2 * Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "param-tweak", "family-swap"],
+    params: { a: 3, b: 2 },
+  },
+  {
+    id: "limacon-convex",
+    name: "Limaçon convex (4+cosθ)",
+    family: "limacon-no-loop",
+    expression: "r = 4 + cos θ",
+    rFunc: (t) => 4 + Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "param-tweak", "family-swap"],
+    params: { a: 4, b: 1 },
+  },
+  {
+    id: "limacon-loop-cos",
+    name: "Limaçon with loop (1+2cosθ)",
+    family: "limacon-loop",
+    expression: "r = 1 + 2cos θ",
+    rFunc: (t) => 1 + 2 * Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak", "ratio-flip"],
+    params: { a: 1, b: 2 },
+  },
+  {
+    id: "limacon-loop-sin",
+    name: "Limaçon with loop (1+2sinθ)",
+    family: "limacon-loop",
+    expression: "r = 1 + 2sin θ",
+    rFunc: (t) => 1 + 2 * Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak", "ratio-flip"],
+    params: { a: 1, b: 2 },
+  },
+  {
+    id: "limacon-loop-cos-minus",
+    name: "Limaçon with loop (1−2cosθ)",
+    family: "limacon-loop",
+    expression: "r = 1 - 2cos θ",
+    rFunc: (t) => 1 - 2 * Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak", "ratio-flip"],
+    params: { a: 1, b: -2 },
+  },
+  {
+    id: "limacon-loop-big",
+    name: "Limaçon with loop (2+3cosθ)",
+    family: "limacon-loop",
+    expression: "r = 2 + 3cos θ",
+    rFunc: (t) => 2 + 3 * Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak", "ratio-flip"],
+    params: { a: 2, b: 3 },
+  },
+  {
+    id: "limacon-loop-sin-minus",
+    name: "Limaçon with loop (2−3sinθ)",
+    family: "limacon-loop",
+    expression: "r = 2 - 3sin θ",
+    rFunc: (t) => 2 - 3 * Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak", "ratio-flip"],
+    params: { a: 2, b: -3 },
+  },
+
+  // ===== 14–29. ROSES (integer petals) =====
+  {
+    id: "rose-sin2",
+    name: "Rose sin(2θ)",
+    family: "rose-even",
+    expression: "r = sin(2θ)",
+    rFunc: (t) => Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 2 },
+  },
+  {
+    id: "rose-cos2",
+    name: "Rose cos(2θ)",
+    family: "rose-even",
+    expression: "r = cos(2θ)",
+    rFunc: (t) => Math.cos(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 2 },
+  },
+  {
+    id: "rose-sin3",
+    name: "Rose sin(3θ)",
+    family: "rose-odd",
+    expression: "r = sin(3θ)",
+    rFunc: (t) => Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 3 },
+  },
+  {
+    id: "rose-cos3",
+    name: "Rose cos(3θ)",
+    family: "rose-odd",
+    expression: "r = cos(3θ)",
+    rFunc: (t) => Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 3 },
+  },
+  {
+    id: "rose-sin4",
+    name: "Rose sin(4θ)",
+    family: "rose-even",
+    expression: "r = sin(4θ)",
+    rFunc: (t) => Math.sin(4 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 4 },
+  },
+  {
+    id: "rose-cos4",
+    name: "Rose cos(4θ)",
+    family: "rose-even",
+    expression: "r = cos(4θ)",
+    rFunc: (t) => Math.cos(4 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 4 },
+  },
+  {
+    id: "rose-sin5",
+    name: "Rose sin(5θ)",
+    family: "rose-odd",
+    expression: "r = sin(5θ)",
+    rFunc: (t) => Math.sin(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 5 },
+  },
+  {
+    id: "rose-cos5",
+    name: "Rose cos(5θ)",
+    family: "rose-odd",
+    expression: "r = cos(5θ)",
+    rFunc: (t) => Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 5 },
+  },
+  {
+    id: "rose-sin6",
+    name: "Rose sin(6θ)",
+    family: "rose-even",
+    expression: "r = sin(6θ)",
+    rFunc: (t) => Math.sin(6 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 6 },
+  },
+  {
+    id: "rose-cos7",
+    name: "Rose cos(7θ)",
+    family: "rose-odd",
+    expression: "r = cos(7θ)",
+    rFunc: (t) => Math.cos(7 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 7 },
+  },
+  {
+    id: "rose-sin8",
+    name: "Rose sin(8θ)",
+    family: "rose-even",
+    expression: "r = sin(8θ)",
+    rFunc: (t) => Math.sin(8 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 8 },
+  },
+  {
+    id: "rose-cos9",
+    name: "Rose cos(9θ)",
+    family: "rose-odd",
+    expression: "r = cos(9θ)",
+    rFunc: (t) => Math.cos(9 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 9 },
+  },
+  {
+    id: "rose-sin10",
+    name: "Rose sin(10θ)",
+    family: "rose-even",
+    expression: "r = sin(10θ)",
+    rFunc: (t) => Math.sin(10 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 1, n: 10 },
+  },
+  {
+    id: "rose-2sin3",
+    name: "Rose 2sin(3θ)",
+    family: "rose-odd",
+    expression: "r = 2sin(3θ)",
+    rFunc: (t) => 2 * Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 2, n: 3 },
+  },
+  {
+    id: "rose-3cos2",
+    name: "Rose 3cos(2θ)",
+    family: "rose-even",
+    expression: "r = 3cos(2θ)",
+    rFunc: (t) => 3 * Math.cos(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "frequency-shift", "param-tweak"],
+    params: { a: 3, n: 2 },
+  },
+
+  // ===== 30–35. ROSES (rational frequency) =====
+  {
+    id: "rose-rat-2-3",
+    name: "Rose cos(2θ/3)",
+    family: "rose-rational",
+    expression: "r = cos(2θ/3)",
+    rFunc: (t) => Math.cos((2 / 3) * t),
+    thetaRange: [0, 3 * TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 2, q: 3 },
+  },
+  {
+    id: "rose-rat-3-2",
+    name: "Rose cos(3θ/2)",
+    family: "rose-rational",
+    expression: "r = cos(3θ/2)",
+    rFunc: (t) => Math.cos((3 / 2) * t),
+    thetaRange: [0, FOUR_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 3, q: 2 },
+  },
+  {
+    id: "rose-rat-5-3",
+    name: "Rose sin(5θ/3)",
+    family: "rose-rational",
+    expression: "r = sin(5θ/3)",
+    rFunc: (t) => Math.sin((5 / 3) * t),
+    thetaRange: [0, 3 * TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 5, q: 3 },
+  },
+  {
+    id: "rose-rat-4-3",
+    name: "Rose cos(4θ/3)",
+    family: "rose-rational",
+    expression: "r = cos(4θ/3)",
+    rFunc: (t) => Math.cos((4 / 3) * t),
+    thetaRange: [0, 3 * TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 4, q: 3 },
+  },
+  {
+    id: "rose-rat-3-4",
+    name: "Rose sin(3θ/4)",
+    family: "rose-rational",
+    expression: "r = sin(3θ/4)",
+    rFunc: (t) => Math.sin((3 / 4) * t),
+    thetaRange: [0, 4 * TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 3, q: 4 },
+  },
+  {
+    id: "rose-rat-5-2",
+    name: "Rose cos(5θ/2)",
+    family: "rose-rational",
+    expression: "r = cos(5θ/2)",
+    rFunc: (t) => Math.cos((5 / 2) * t),
+    thetaRange: [0, FOUR_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "ratio-flip", "trig-swap"],
+    params: { p: 5, q: 2 },
+  },
+
+  // ===== 36–38. LEMNISCATES =====
+  {
+    id: "lemniscate-cos",
+    name: "Lemniscate r²=4cos(2θ)",
+    family: "lemniscate",
+    expression: "r² = 4cos(2θ)",
+    rFunc: { rSquared: true, func: (t) => 4 * Math.cos(2 * t) } as RFunc,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 2 },
+  },
+  {
+    id: "lemniscate-sin",
+    name: "Lemniscate r²=4sin(2θ)",
+    family: "lemniscate",
+    expression: "r² = 4sin(2θ)",
+    rFunc: { rSquared: true, func: (t) => 4 * Math.sin(2 * t) } as RFunc,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 2 },
+  },
+  {
+    id: "lemniscate-big",
+    name: "Lemniscate r²=9cos(2θ)",
+    family: "lemniscate",
+    expression: "r² = 9cos(2θ)",
+    rFunc: { rSquared: true, func: (t) => 9 * Math.cos(2 * t) } as RFunc,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["trig-swap", "sign-flip", "param-tweak"],
+    params: { a: 3 },
+  },
+
+  // ===== 39–44. SPIRALS =====
+  {
+    id: "archimedes-slow",
+    name: "Archimedes spiral (0.5θ)",
+    family: "archimedes",
+    expression: "r = 0.5θ",
+    rFunc: (t) => 0.5 * t,
+    thetaRange: [0, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 0.5 },
+  },
+  {
+    id: "archimedes-fast",
+    name: "Archimedes spiral (θ)",
+    family: "archimedes",
+    expression: "r = θ",
+    rFunc: (t) => t,
+    thetaRange: [0, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 1 },
+  },
+  {
+    id: "log-spiral-slow",
+    name: "Log spiral (e^0.1θ)",
+    family: "log-spiral",
+    expression: "r = e^(0.1θ)",
+    rFunc: (t) => Math.exp(0.1 * t),
+    thetaRange: [0, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 1, b: 0.1 },
+  },
+  {
+    id: "log-spiral-fast",
+    name: "Log spiral (0.3·e^0.2θ)",
+    family: "log-spiral",
+    expression: "r = 0.3·e^(0.2θ)",
+    rFunc: (t) => 0.3 * Math.exp(0.2 * t),
+    thetaRange: [0, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 0.3, b: 0.2 },
+  },
+  {
+    id: "fermat-spiral",
+    name: "Fermat's spiral r²=4θ",
+    family: "fermat",
+    expression: "r² = 4θ",
+    rFunc: { rSquared: true, func: (t) => 4 * t } as RFunc,
+    thetaRange: [0, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 2 },
+  },
+  {
+    id: "hyperbolic-spiral",
+    name: "Hyperbolic spiral (2/θ)",
+    family: "hyperbolic",
+    expression: "r = 2/θ",
+    rFunc: (t) => 2 / t,
+    thetaRange: [0.1, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 2 },
+  },
+
+  // ===== 45–49. CONIC SECTIONS =====
+  {
+    id: "conic-ellipse",
+    name: "Conic ellipse (e=0.5)",
+    family: "conic",
+    expression: "r = 2/(1 + 0.5cos θ)",
+    rFunc: (t) => 2 / (1 + 0.5 * Math.cos(t)),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "sign-flip", "family-swap"],
+    params: { a: 2, e: 0.5 },
+  },
+  {
+    id: "conic-parabola",
+    name: "Conic parabola (e=1)",
+    family: "conic",
+    expression: "r = 2/(1 + cos θ)",
+    rFunc: (t) => 2 / (1 + Math.cos(t)),
+    thetaRange: [0.05, TWO_PI - 0.05],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "sign-flip", "family-swap"],
+    params: { a: 2, e: 1 },
+  },
+  {
+    id: "conic-hyperbola",
+    name: "Conic hyperbola (e=1.5)",
+    family: "conic",
+    expression: "r = 2/(1 + 1.5cos θ)",
+    rFunc: (t) => 2 / (1 + 1.5 * Math.cos(t)),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "sign-flip", "family-swap"],
+    params: { a: 2, e: 1.5 },
+  },
+  {
+    id: "conic-ellipse-sin",
+    name: "Conic ellipse sin (e=0.3)",
+    family: "conic",
+    expression: "r = 3/(1 + 0.3sin θ)",
+    rFunc: (t) => 3 / (1 + 0.3 * Math.sin(t)),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "trig-swap", "family-swap"],
+    params: { a: 3, e: 0.3 },
+  },
+  {
+    id: "conic-near-circle",
+    name: "Conic near-circle (e=0.8)",
+    family: "conic",
+    expression: "r = 1/(1 + 0.8cos θ)",
+    rFunc: (t) => 1 / (1 + 0.8 * Math.cos(t)),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "sign-flip", "family-swap"],
+    params: { a: 1, e: 0.8 },
+  },
+
+  // ===== 50. BUTTERFLY =====
+  {
+    id: "butterfly",
+    name: "Butterfly curve",
+    family: "butterfly",
+    expression: "r = e^sin(θ) - 2cos(4θ) + sin⁵((2θ-π)/24)",
+    rFunc: (t) =>
+      Math.exp(Math.sin(t)) -
+      2 * Math.cos(4 * t) +
+      Math.pow(Math.sin((2 * t - PI) / 24), 5),
+    thetaRange: [0, 12 * PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak"],
+    params: {},
+  },
+
+  // ===== 51–58. LIMAÇON-ROSE HYBRIDS =====
+  {
+    id: "hybrid-1-2-3",
+    name: "Hybrid 1+2sin(3θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 1 + 2sin(3θ)",
+    rFunc: (t) => 1 + 2 * Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 1, b: 2, n: 3 },
+  },
+  {
+    id: "hybrid-1-2-4",
+    name: "Hybrid 1+2sin(4θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 1 + 2sin(4θ)",
+    rFunc: (t) => 1 + 2 * Math.sin(4 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 1, b: 2, n: 4 },
+  },
+  {
+    id: "hybrid-2-3-2",
+    name: "Hybrid 2+3sin(2θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 2 + 3sin(2θ)",
+    rFunc: (t) => 2 + 3 * Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 2, b: 3, n: 2 },
+  },
+  {
+    id: "hybrid-1-1-5",
+    name: "Hybrid 1+sin(5θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 1 + sin(5θ)",
+    rFunc: (t) => 1 + Math.sin(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 1, b: 1, n: 5 },
+  },
+  {
+    id: "hybrid-2-1-4",
+    name: "Hybrid 2+cos(4θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 2 + cos(4θ)",
+    rFunc: (t) => 2 + Math.cos(4 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 2, b: 1, n: 4 },
+  },
+  {
+    id: "hybrid-3-2-3",
+    name: "Hybrid 3+2cos(3θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 3 + 2cos(3θ)",
+    rFunc: (t) => 3 + 2 * Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 3, b: 2, n: 3 },
+  },
+  {
+    id: "hybrid-1-3-6",
+    name: "Hybrid 1+3sin(6θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 1 + 3sin(6θ)",
+    rFunc: (t) => 1 + 3 * Math.sin(6 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 1, b: 3, n: 6 },
+  },
+  {
+    id: "hybrid-2-2-5",
+    name: "Hybrid 2+2cos(5θ)",
+    family: "limacon-rose-hybrid",
+    expression: "r = 2 + 2cos(5θ)",
+    rFunc: (t) => 2 + 2 * Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak", "trig-swap"],
+    params: { a: 2, b: 2, n: 5 },
+  },
+
+  // ===== 59–68. COMPOUND ADDITIVE =====
+  {
+    id: "compound-cos2-sin3",
+    name: "cos(2θ)+sin(3θ)",
+    family: "compound",
+    expression: "r = cos(2θ) + sin(3θ)",
+    rFunc: (t) => Math.cos(2 * t) + Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 2, n: 3 },
+  },
+  {
+    id: "compound-cos3-sin5",
+    name: "cos(3θ)+sin(5θ)",
+    family: "compound",
+    expression: "r = cos(3θ) + sin(5θ)",
+    rFunc: (t) => Math.cos(3 * t) + Math.sin(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 3, n: 5 },
+  },
+  {
+    id: "compound-cos1-sin2",
+    name: "cos(θ)+sin(2θ)",
+    family: "compound",
+    expression: "r = cos(θ) + sin(2θ)",
+    rFunc: (t) => Math.cos(t) + Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 1, n: 2 },
+  },
+  {
+    id: "compound-cos4-sin1",
+    name: "cos(4θ)+sin(θ)",
+    family: "compound",
+    expression: "r = cos(4θ) + sin(θ)",
+    rFunc: (t) => Math.cos(4 * t) + Math.sin(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 4, n: 1 },
+  },
+  {
+    id: "compound-sin2-sin3",
+    name: "sin(2θ)+sin(3θ)",
+    family: "compound",
+    expression: "r = sin(2θ) + sin(3θ)",
+    rFunc: (t) => Math.sin(2 * t) + Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 2, n: 3 },
+  },
+  {
+    id: "compound-2cos1-cos3",
+    name: "2cos(θ)+cos(3θ)",
+    family: "compound",
+    expression: "r = 2cos(θ) + cos(3θ)",
+    rFunc: (t) => 2 * Math.cos(t) + Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 1, n: 3 },
+  },
+  {
+    id: "compound-cos5-sin2",
+    name: "cos(5θ)+sin(2θ)",
+    family: "compound",
+    expression: "r = cos(5θ) + sin(2θ)",
+    rFunc: (t) => Math.cos(5 * t) + Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 5, n: 2 },
+  },
+  {
+    id: "compound-sin4-cos3",
+    name: "sin(4θ)+cos(3θ)",
+    family: "compound",
+    expression: "r = sin(4θ) + cos(3θ)",
+    rFunc: (t) => Math.sin(4 * t) + Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 4, n: 3 },
+  },
+  {
+    id: "compound-cos2-cos5",
+    name: "cos(2θ)+cos(5θ)",
+    family: "compound",
+    expression: "r = cos(2θ) + cos(5θ)",
+    rFunc: (t) => Math.cos(2 * t) + Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 2, n: 5 },
+  },
+  {
+    id: "compound-sin1-sin5",
+    name: "sin(θ)+sin(5θ)",
+    family: "compound",
+    expression: "r = sin(θ) + sin(5θ)",
+    rFunc: (t) => Math.sin(t) + Math.sin(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "param-tweak"],
+    params: { m: 1, n: 5 },
+  },
+
+  // ===== 69–74. PRODUCT CURVES =====
+  {
+    id: "product-cos1-cos2",
+    name: "cos(θ)·cos(2θ)",
+    family: "product",
+    expression: "r = cos(θ)·cos(2θ)",
+    rFunc: (t) => Math.cos(t) * Math.cos(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 1, n: 2 },
+  },
+  {
+    id: "product-sin1-sin3",
+    name: "sin(θ)·sin(3θ)",
+    family: "product",
+    expression: "r = sin(θ)·sin(3θ)",
+    rFunc: (t) => Math.sin(t) * Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 1, n: 3 },
+  },
+  {
+    id: "product-cos1-sin2",
+    name: "cos(θ)·sin(2θ)",
+    family: "product",
+    expression: "r = cos(θ)·sin(2θ)",
+    rFunc: (t) => Math.cos(t) * Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 1, n: 2 },
+  },
+  {
+    id: "product-sin2-cos3",
+    name: "sin(2θ)·cos(3θ)",
+    family: "product",
+    expression: "r = sin(2θ)·cos(3θ)",
+    rFunc: (t) => Math.sin(2 * t) * Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 2, n: 3 },
+  },
+  {
+    id: "product-cos2-cos3",
+    name: "cos(2θ)·cos(3θ)",
+    family: "product",
+    expression: "r = cos(2θ)·cos(3θ)",
+    rFunc: (t) => Math.cos(2 * t) * Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 2, n: 3 },
+  },
+  {
+    id: "product-sin2-sin5",
+    name: "sin(2θ)·sin(5θ)",
+    family: "product",
+    expression: "r = sin(2θ)·sin(5θ)",
+    rFunc: (t) => Math.sin(2 * t) * Math.sin(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap", "family-swap"],
+    params: { m: 2, n: 5 },
+  },
+
+  // ===== 75–81. MULTI-FREQUENCY / TRIPLE COMPOUND =====
+  {
+    id: "triple-sin123",
+    name: "sin(θ)+sin(2θ)+sin(3θ)",
+    family: "compound",
+    expression: "r = sin(θ) + sin(2θ) + sin(3θ)",
+    rFunc: (t) => Math.sin(t) + Math.sin(2 * t) + Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 1, n: 3 },
+  },
+  {
+    id: "triple-cos123",
+    name: "cos(θ)+cos(2θ)+cos(3θ)",
+    family: "compound",
+    expression: "r = cos(θ) + cos(2θ) + cos(3θ)",
+    rFunc: (t) => Math.cos(t) + Math.cos(2 * t) + Math.cos(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 1, n: 3 },
+  },
+  {
+    id: "multi-2-sin-cos2",
+    name: "2+sin(θ)+cos(2θ)",
+    family: "compound",
+    expression: "r = 2 + sin(θ) + cos(2θ)",
+    rFunc: (t) => 2 + Math.sin(t) + Math.cos(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 1, n: 2 },
+  },
+  {
+    id: "multi-3-cos3-sin2",
+    name: "3+cos(3θ)+sin(2θ)",
+    family: "compound",
+    expression: "r = 3 + cos(3θ) + sin(2θ)",
+    rFunc: (t) => 3 + Math.cos(3 * t) + Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 3, n: 2 },
+  },
+  {
+    id: "multi-cos135",
+    name: "cos(θ)+cos(3θ)+cos(5θ)",
+    family: "compound",
+    expression: "r = cos(θ) + cos(3θ) + cos(5θ)",
+    rFunc: (t) => Math.cos(t) + Math.cos(3 * t) + Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 1, n: 5 },
+  },
+  {
+    id: "multi-sin246",
+    name: "sin(2θ)+sin(4θ)+sin(6θ)",
+    family: "compound",
+    expression: "r = sin(2θ) + sin(4θ) + sin(6θ)",
+    rFunc: (t) => Math.sin(2 * t) + Math.sin(4 * t) + Math.sin(6 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 2, n: 6 },
+  },
+  {
+    id: "multi-1-cos-sin3-cos5",
+    name: "1+cos(θ)+sin(3θ)+cos(5θ)",
+    family: "compound",
+    expression: "r = 1 + cos(θ) + sin(3θ) + cos(5θ)",
+    rFunc: (t) => 1 + Math.cos(t) + Math.sin(3 * t) + Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { m: 1, n: 5 },
+  },
+
+  // ===== 82–85. COCHLEOID & SPECIAL =====
+  {
+    id: "cochleoid",
+    name: "Cochleoid sin(θ)/θ",
+    family: "cochleoid",
+    expression: "r = sin(θ)/θ",
+    rFunc: (t) => Math.sin(t) / t,
+    thetaRange: [0.01, SIX_PI],
+    tier: 1,
+    distractorStrategies: ["param-tweak", "family-swap"],
+    params: { a: 1 },
+  },
+  {
+    id: "cissoid-like",
+    name: "Cissoid-like curve",
+    family: "exotic",
+    expression: "r = 2sin(θ)tan(θ)",
+    rFunc: (t) => {
+      const c = Math.cos(t);
+      if (Math.abs(c) < 0.01) return 0;
+      return 2 * Math.sin(t) * Math.sin(t) / c;
+    },
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["family-swap"],
+    params: {},
+  },
+  {
+    id: "half-freq-rose",
+    name: "Rose sin(θ/2)",
+    family: "rose-rational",
+    expression: "r = sin(θ/2)",
+    rFunc: (t) => Math.sin(t / 2),
+    thetaRange: [0, FOUR_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { p: 1, q: 2 },
+  },
+  {
+    id: "third-freq-rose",
+    name: "Rose cos(θ/3)",
+    family: "rose-rational",
+    expression: "r = cos(θ/3)",
+    rFunc: (t) => Math.cos(t / 3),
+    thetaRange: [0, 3 * TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "trig-swap"],
+    params: { p: 1, q: 3 },
+  },
+
+  // ===== 86–93. EXOTIC / UNUSUAL =====
+  {
+    id: "heart",
+    name: "Heart curve",
+    family: "exotic",
+    expression: "r = 2 - 2sin(θ) + sin(θ)√|cos(θ)|/(sin(θ)+1.4)",
+    rFunc: (t) =>
+      2 - 2 * Math.sin(t) +
+      (Math.sin(t) * Math.sqrt(Math.abs(Math.cos(t)))) / (Math.sin(t) + 1.4),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["family-swap"],
+    params: {},
+  },
+  {
+    id: "four-leaf-product",
+    name: "Four-leaf cos²(2θ)",
+    family: "exotic",
+    expression: "r = cos²(2θ)",
+    rFunc: (t) => Math.pow(Math.cos(2 * t), 2),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "peanut",
+    name: "Peanut curve",
+    family: "exotic",
+    expression: "r² = cos(2θ) + 2",
+    rFunc: { rSquared: true, func: (t) => Math.cos(2 * t) + 2 } as RFunc,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["family-swap"],
+    params: {},
+  },
+  {
+    id: "clover",
+    name: "Clover (sin²(2θ)+cos(4θ))",
+    family: "exotic",
+    expression: "r = sin²(2θ) + cos(4θ)",
+    rFunc: (t) => Math.pow(Math.sin(2 * t), 2) + Math.cos(4 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "star-burst",
+    name: "Star burst",
+    family: "exotic",
+    expression: "r = 2 + cos(6θ)·sin(3θ)",
+    rFunc: (t) => 2 + Math.cos(6 * t) * Math.sin(3 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "wavy-circle",
+    name: "Wavy circle",
+    family: "exotic",
+    expression: "r = 3 + sin(8θ)",
+    rFunc: (t) => 3 + Math.sin(8 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak"],
+    params: {},
+  },
+  {
+    id: "spiral-flower",
+    name: "Spiral flower",
+    family: "exotic",
+    expression: "r = 1 + 0.5θ·sin(3θ)",
+    rFunc: (t) => 1 + 0.5 * t * Math.sin(3 * t),
+    thetaRange: [0, FOUR_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "sunflower",
+    name: "Sunflower",
+    family: "exotic",
+    expression: "r = 4 + 2sin(12θ)",
+    rFunc: (t) => 4 + 2 * Math.sin(12 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak"],
+    params: {},
+  },
+
+  // ===== 94–100. MORE EXOTIC =====
+  {
+    id: "maurer-inspired",
+    name: "Twisted rose",
+    family: "exotic",
+    expression: "r = sin(4θ)·cos(2θ) + cos(θ)",
+    rFunc: (t) => Math.sin(4 * t) * Math.cos(2 * t) + Math.cos(t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "crinkle",
+    name: "Crinkle curve",
+    family: "exotic",
+    expression: "r = 1 + sin(θ)·cos(5θ)",
+    rFunc: (t) => 1 + Math.sin(t) * Math.cos(5 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "propeller",
+    name: "Propeller",
+    family: "exotic",
+    expression: "r = cos(3θ)·cos(θ) + sin(2θ)",
+    rFunc: (t) => Math.cos(3 * t) * Math.cos(t) + Math.sin(2 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "atom",
+    name: "Atom curve",
+    family: "exotic",
+    expression: "r = sin(3θ) + sin²(θ)",
+    rFunc: (t) => Math.sin(3 * t) + Math.pow(Math.sin(t), 2),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "gear",
+    name: "Gear curve",
+    family: "exotic",
+    expression: "r = 3 + 0.5cos(16θ)",
+    rFunc: (t) => 3 + 0.5 * Math.cos(16 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "param-tweak"],
+    params: {},
+  },
+  {
+    id: "nautilus",
+    name: "Nautilus",
+    family: "exotic",
+    expression: "r = e^(0.15θ)·|sin(2θ)|",
+    rFunc: (t) => Math.exp(0.15 * t) * Math.abs(Math.sin(2 * t)),
+    thetaRange: [0, FOUR_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "splash",
+    name: "Splash",
+    family: "exotic",
+    expression: "r = 2cos(θ) + cos(2θ) + cos(5θ)/2",
+    rFunc: (t) => 2 * Math.cos(t) + Math.cos(2 * t) + Math.cos(5 * t) / 2,
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
+  {
+    id: "starburst-12",
+    name: "Starburst 12-pointed",
+    family: "exotic",
+    expression: "r = 2 + sin(6θ)² + cos(6θ)",
+    rFunc: (t) => 2 + Math.pow(Math.sin(6 * t), 2) + Math.cos(6 * t),
+    thetaRange: [0, TWO_PI],
+    tier: 1,
+    distractorStrategies: ["frequency-shift", "family-swap"],
+    params: {},
+  },
 ];
 
 // ---------------------------------------------------------------------------
 // Helper functions
 // ---------------------------------------------------------------------------
 
-export function getCurvesByTier(tier: Tier): CurveTemplate[] {
-  return curves.filter((c) => c.tier === tier);
+export function getCurvesByTier(_tier: Tier): CurveTemplate[] {
+  // No tiers — always return all curves
+  return curves;
 }
 
 export function getCurvesByFamily(family: string): CurveTemplate[] {
