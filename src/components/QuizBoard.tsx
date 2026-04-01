@@ -12,15 +12,17 @@ interface QuizBoardProps {
   onSelect: (index: number) => void;
 }
 
-const familyTips: Record<string, string> = {
-  rose: "Rose curves have the form r = a cos(n\u03b8) or r = a sin(n\u03b8). The number of petals depends on whether n is odd or even.",
-  cardioid: "Cardioids are special lima\u00e7ons where a = b, creating a heart-shaped curve with a cusp at the origin.",
-  limacon: "Lima\u00e7ons have the form r = a \u00b1 b cos(\u03b8). The shape varies from inner loop to dimpled to convex depending on a/b.",
-  lemniscate: "Lemniscates satisfy r\u00b2 = a\u00b2 cos(2\u03b8) or sin(2\u03b8), forming a figure-8 shape.",
-  spiral: "Spirals continuously increase or decrease in radius as \u03b8 grows.",
-  circle: "Circles in polar form can be r = a, r = a cos(\u03b8), or r = a sin(\u03b8).",
-  conic: "Conic sections in polar form use r = ed/(1 \u00b1 e cos(\u03b8)), where e is eccentricity.",
-};
+const tips = [
+  "Look at the number of petals, loops, or lobes to narrow down the formula.",
+  "Symmetry is key: even functions produce symmetric graphs, odd functions don't.",
+  "Products of trig functions create more complex petal patterns.",
+  "The sign and magnitude of coefficients control dimples, loops, and amplitude.",
+  "Spirals grow outward — Archimedean linearly, logarithmic exponentially.",
+  "Adding a constant offset shifts the curve away from the origin.",
+  "Higher frequency terms (like sin(6θ)) create more oscillations around the curve.",
+  "Absolute value |f(θ)| reflects negative portions, doubling visible features.",
+  "Squared trig functions produce smoother, rounder shapes than their originals.",
+];
 
 export default function QuizBoard({ state, onSelect }: QuizBoardProps) {
   const { question, showResult, selectedIndex, mode } = state;
@@ -50,9 +52,7 @@ export default function QuizBoard({ state, onSelect }: QuizBoardProps) {
   const wasWrong =
     showResult && selectedIndex !== null && selectedIndex !== question.correctIndex;
 
-  const tip = correctCurve
-    ? familyTips[correctCurve.family] || "Study the shape and symmetry of polar curves to build your intuition."
-    : "";
+  const tip = tips[Math.floor(Math.random() * tips.length)];
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">

@@ -1,12 +1,10 @@
 import type {
   QuizMode,
-  Tier,
   CurveTemplate,
   QuizQuestion,
   QuizState,
 } from "@/types";
-import { getCurvesByTier } from "./curves";
-import { generateDistractors } from "./distractors";
+import { getAllCurves } from "./curves";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,6 +19,12 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
+function pickRandom<T>(arr: T[], count: number, exclude?: Set<T>): T[] {
+  const pool = exclude ? arr.filter((x) => !exclude.has(x)) : [...arr];
+  const shuffled = shuffle(pool);
+  return shuffled.slice(0, count);
+}
+
 // ---------------------------------------------------------------------------
 // createInitialState
 // ---------------------------------------------------------------------------
@@ -30,11 +34,9 @@ export function createInitialState(
 ): QuizState {
   return {
     mode,
-    currentTier: 1,
     score: 0,
     streak: 0,
     totalAnswered: 0,
-    correctPerTier: { 1: 0, 2: 0, 3: 0, 4: 0 },
     question: null,
     selectedIndex: null,
     showResult: false,
@@ -42,13 +44,15 @@ export function createInitialState(
 }
 
 // ---------------------------------------------------------------------------
-// generateQuestion
+// generateQuestion — pure random from the full pool
 // ---------------------------------------------------------------------------
 
 export function generateQuestion(state: QuizState): QuizQuestion {
-  const pool = getCurvesByTier(state.currentTier);
+  const pool = getAllCurves();
   const correct = pool[Math.floor(Math.random() * pool.length)];
-  const distractors = generateDistractors(correct, 3);
+
+  // Pick 3 random distractors (different from correct)
+  const distractors = pickRandom<CurveTemplate>(pool, 3, new Set([correct]));
 
   const allOptions = [correct, ...distractors];
   const shuffled = shuffle(allOptions);
@@ -76,27 +80,11 @@ export function submitAnswer(
   const newScore = isCorrect ? state.score + 1 : state.score;
   const newTotalAnswered = state.totalAnswered + 1;
 
-  const newCorrectPerTier = { ...state.correctPerTier };
-  if (isCorrect) {
-    newCorrectPerTier[state.currentTier] =
-      (newCorrectPerTier[state.currentTier] || 0) + 1;
-  }
-
-  // Advance tier if streak >= 5 and not already at max tier
-  let newTier = state.currentTier;
-  let adjustedStreak = newStreak;
-  if (newStreak >= 5 && state.currentTier < 4) {
-    newTier = (state.currentTier + 1) as Tier;
-    adjustedStreak = 0;
-  }
-
   return {
     ...state,
     score: newScore,
-    streak: adjustedStreak,
+    streak: newStreak,
     totalAnswered: newTotalAnswered,
-    correctPerTier: newCorrectPerTier,
-    currentTier: newTier,
     selectedIndex,
     showResult: true,
   };
@@ -119,18 +107,6 @@ export function nextQuestion(state: QuizState): QuizState {
 // ---------------------------------------------------------------------------
 // toggleMode
 // ---------------------------------------------------------------------------
-
-export function setTier(state: QuizState, tier: Tier): QuizState {
-  const newState: QuizState = {
-    ...state,
-    currentTier: tier,
-    streak: 0,
-    selectedIndex: null,
-    showResult: false,
-  };
-  newState.question = generateQuestion(newState);
-  return newState;
-}
 
 export function toggleMode(state: QuizState): QuizState {
   const newMode: QuizMode =

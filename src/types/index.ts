@@ -1,15 +1,5 @@
 export type QuizMode = "expression-to-graph" | "graph-to-expression";
 
-export type Tier = 1 | 2 | 3 | 4;
-
-export type DistractorStrategy =
-  | "trig-swap"
-  | "sign-flip"
-  | "frequency-shift"
-  | "param-tweak"
-  | "family-swap"
-  | "ratio-flip";
-
 export type RFuncStandard = (theta: number) => number;
 
 export type RFuncSquared = {
@@ -22,13 +12,9 @@ export type RFunc = RFuncStandard | RFuncSquared;
 export interface CurveTemplate {
   id: string;
   name: string;
-  family: string;
   expression: string;
   rFunc: RFunc;
   thetaRange: [number, number];
-  tier: Tier;
-  distractorStrategies: DistractorStrategy[];
-  params: Record<string, number>;
 }
 
 export interface PlotOptions {
@@ -50,11 +36,9 @@ export interface QuizQuestion {
 
 export interface QuizState {
   mode: QuizMode;
-  currentTier: Tier;
   score: number;
   streak: number;
   totalAnswered: number;
-  correctPerTier: Record<Tier, number>;
   question: QuizQuestion | null;
   selectedIndex: number | null;
   showResult: boolean;

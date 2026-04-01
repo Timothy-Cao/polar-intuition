@@ -11,6 +11,7 @@
  *   "r = sin(3θ)"        →  "r = \\sin(3\\theta)"
  *   "r² = 4cos(2θ)"      →  "r^2 = 4\\cos(2\\theta)"
  *   "r = 2/(1 + 0.5cos θ)" → "r = \\frac{2}{1 + 0.5\\cos\\theta}"
+ *   "r = |sin(3θ)|"      →  "r = |\\sin(3\\theta)|"
  */
 export function formatExpression(expr: string): string {
   let s = expr;
@@ -22,6 +23,12 @@ export function formatExpression(expr: string): string {
   s = s.replace(
     /(\w[\w.]*)\/\(([^)]+)\)/g,
     (_match, num: string, denom: string) => `\\frac{${num}}{${denom}}`,
+  );
+
+  // Pattern: "θ/(expr)" → \frac{θ}{expr}
+  s = s.replace(
+    /θ\/\(([^)]+)\)/g,
+    (_match, denom: string) => `\\frac{θ}{${denom}}`,
   );
 
   // Pattern: "a/θ" → \frac{a}{θ}  (θ will be replaced later)
@@ -39,6 +46,7 @@ export function formatExpression(expr: string): string {
 
   // --- Superscript Unicode characters ---
   s = s.replace(/r²/g, "r^2");
+  s = s.replace(/θ²/g, "θ^2");
   s = s.replace(/sin⁵/g, "\\sin^5");
   s = s.replace(/cos⁵/g, "\\cos^5");
   s = s.replace(/sin⁴/g, "\\sin^4");
@@ -62,8 +70,16 @@ export function formatExpression(expr: string): string {
   // Handle nested parentheses by matching balanced parens
   s = s.replace(/e\^\(([^)]*)\)/g, (_match, inner: string) => `e^{${inner}}`);
 
+  // Handle e^token (no parens) like e^cos → e^{cos}
+  s = s.replace(/e\^(\\(?:sin|cos|tan)[^(]*\([^)]*\))/g, (_match, inner: string) => `e^{${inner}}`);
+
+  // --- Absolute value: |...| is valid LaTeX, leave as-is ---
+
   // --- Middle dot: · → \cdot ---
   s = s.replace(/·/g, "\\cdot ");
+
+  // --- √ symbol ---
+  s = s.replace(/√/g, "\\sqrt");
 
   return s;
 }
